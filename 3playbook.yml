@@ -1,0 +1,25 @@
+
+---
+- name: Install default Apache web server
+  hosts: all
+  become: yes
+
+  vars:
+    source_file: ./MyWebSite/index.html
+    destin_file: /var/www/html
+
+  tasks:
+
+  - name: Install apache
+    yum: name=httpd state=latest
+
+  - name: Copy Page to servers
+    copy: src={{ source_file }}  dest={{ destin_file }} mode=0555
+    notify: Restart apache
+
+  - name: Start apache
+    service: name=httpd state=started enable=yes  
+
+  handlers:
+  - name: Restart apache
+    service: name=httpd state=restarted  
