@@ -28,8 +28,8 @@ username_box = driver.find_element("xpath", "//input[@id='session_key']")
 password_box = driver.find_element("xpath", "//input[@id='session_password']")
 
 # Вводим данные для авторизации
-username_box.send_keys("nikvladimirovich2@gmail.com")
-password_box.send_keys("nekitbljat")
+username_box.send_keys("")
+password_box.send_keys("")
 
 # Отправляем форму авторизации
 password_box.submit()
