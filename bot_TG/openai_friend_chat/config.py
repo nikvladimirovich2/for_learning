@@ -1,2 +1,2 @@
-open_ai_token = "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"
-tg_bot_token = "5438822308:AAGHFZqZWrCztvx4fXnVJBSgWHvqNY9FwhI"
+open_ai_token = ""
+tg_bot_token = ""
