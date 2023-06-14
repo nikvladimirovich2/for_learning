@@ -15,8 +15,8 @@ driver = webdriver.Chrome(options=options)
 driver.get("https://www.linkedin.com")
 
 # Логин (необходимо заменить на ваши учетные данные)
-username = "nikvladimirovich2@gmail.com"
-password = "nekitbljat"
+username = ""
+password = ""
 
 # Ввод логина
 time.sleep(3)
