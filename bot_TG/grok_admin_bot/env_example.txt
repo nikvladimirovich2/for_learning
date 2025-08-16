@@ -1,0 +1,17 @@
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Grok AI API Configuration
+GROK_API_KEY=your_grok_api_key_here
+GROK_API_URL=https://api.x.ai/v1/chat/completions
+
+# Channel Management
+ADMIN_CHANNEL_ID=@your_admin_channel
+PUBLIC_CHANNEL_ID=@your_public_channel
+
+# Bot Settings
+DEFAULT_LANGUAGE=ru
+MAX_COMMENT_LENGTH=1000
+MAX_ARTICLE_LENGTH=4000
+COMMENT_RESPONSE_TIMEOUT=30
+ARTICLE_GENERATION_TIMEOUT=120

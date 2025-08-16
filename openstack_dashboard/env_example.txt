@@ -1,0 +1,12 @@
+# OpenStack Dashboard Configuration
+SECRET_KEY=your-secret-key-here
+
+# OpenStack Connection Details
+OPENSTACK_AUTH_URL=http://your-openstack-controller:5000/v3
+OPENSTACK_PROJECT_NAME=your-project-name
+OPENSTACK_USERNAME=your-username
+OPENSTACK_PASSWORD=your-password
+
+# Flask Configuration
+FLASK_ENV=development
+FLASK_DEBUG=true
