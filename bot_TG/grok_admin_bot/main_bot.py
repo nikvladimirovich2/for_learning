@@ -3,7 +3,7 @@ import logging
 from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import TELEGRAM_BOT_TOKEN, DEFAULT_LANGUAGE, ERROR_MESSAGES
-from grok_api import GrokAPIClient
+from chatgpt_api import ChatGPTAPIClient
 from channel_manager import ChannelManager
 from comment_handler import CommentHandler
 from article_generator import ArticleGenerator
@@ -24,10 +24,10 @@ class GrokAdminBot:
         self.bot = Bot(token=token)
         
         # Initialize components
-        self.grok_client = GrokAPIClient(language=language)
+        self.chatgpt_client = ChatGPTAPIClient(language=language)
         self.channel_manager = ChannelManager(self.bot, language=language)
-        self.comment_handler = CommentHandler(self.bot, self.grok_client, language=language)
-        self.article_generator = ArticleGenerator(self.bot, self.grok_client, self.channel_manager, language=language)
+        self.comment_handler = CommentHandler(self.bot, self.chatgpt_client, language=language)
+        self.article_generator = ArticleGenerator(self.bot, self.chatgpt_client, self.channel_manager, language=language)
         
         # Initialize application
         self.application = Application.builder().token(token).build()
@@ -47,7 +47,7 @@ class GrokAdminBot:
         self.application.add_handler(CommandHandler("article_stats", self.article_stats_command))
         self.application.add_handler(CommandHandler("schedule_articles", self.schedule_articles_command))
         self.application.add_handler(CommandHandler("language", self.language_command))
-        self.application.add_handler(CommandHandler("test_grok", self.test_grok_command))
+        self.application.add_handler(CommandHandler("test_chatgpt", self.test_chatgpt_command))
         
         # Message handlers
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
@@ -89,8 +89,8 @@ class GrokAdminBot:
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /status command"""
         try:
-            # Check Grok AI connection
-            grok_status = self.grok_client.test_connection()
+            # Check OpenAI ChatGPT connection
+            chatgpt_status = self.chatgpt_client.test_connection()
             
             # Get basic statistics
             comment_stats = self.comment_handler.get_comment_analytics()
@@ -307,7 +307,7 @@ class GrokAdminBot:
                 return
             
             self.language = new_language
-            self.grok_client.language = new_language
+            self.chatgpt_client.language = new_language
             self.channel_manager.language = new_language
             self.comment_handler.language = new_language
             self.article_generator.language = new_language
@@ -319,12 +319,12 @@ class GrokAdminBot:
             logger.error(f"Error in language command: {e}")
             await update.message.reply_text(self.get_error_message("api_error"))
     
-    async def test_grok_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /test_grok command"""
+    async def test_chatgpt_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /test_chatgpt command"""
         try:
-            await update.message.reply_text("🔗 Тестирую подключение к Grok AI...")
+            await update.message.reply_text("🔗 Тестирую подключение к OpenAI ChatGPT...")
             
-            success = self.grok_client.test_connection()
+            success = self.chatgpt_client.test_connection()
             
             if success:
                 await update.message.reply_text("✅ Подключение к Grok AI успешно!")
@@ -461,11 +461,11 @@ class GrokAdminBot:
     async def run(self):
         """Run the bot"""
         try:
-            logger.info("Starting Grok Admin Bot...")
+            logger.info("Starting ChatGPT Admin Bot...")
             
-            # Test Grok AI connection
-            if not self.grok_client.test_connection():
-                logger.warning("Grok AI connection test failed. Bot will start but some features may not work.")
+            # Test OpenAI ChatGPT connection
+            if not self.chatgpt_client.test_connection():
+                logger.warning("OpenAI ChatGPT connection test failed. Bot will start but some features may not work.")
             
             # Start the bot
             await self.application.initialize()

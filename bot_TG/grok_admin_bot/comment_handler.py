@@ -2,15 +2,15 @@ import asyncio
 from typing import Dict, List, Optional, Tuple
 from telegram import Bot, Update, Message, User
 from telegram.ext import ContextTypes
-from grok_api import GrokAPIClient
+from chatgpt_api import ChatGPTAPIClient
 from config import ERROR_MESSAGES, DEFAULT_LANGUAGE, MAX_COMMENT_LENGTH
 
 class CommentHandler:
     """Handles user comments and generates AI-powered responses"""
     
-    def __init__(self, bot: Bot, grok_client: GrokAPIClient, language: str = DEFAULT_LANGUAGE):
+    def __init__(self, bot: Bot, chatgpt_client: ChatGPTAPIClient, language: str = DEFAULT_LANGUAGE):
         self.bot = bot
-        self.grok_client = grok_client
+        self.chatgpt_client = chatgpt_client
         self.language = language
         self.pending_comments = {}  # Track comments being processed
         self.comment_history = {}   # Store comment history for context
@@ -116,8 +116,8 @@ class CommentHandler:
             user_context = f"User: {user.first_name} {user.last_name or ''} (ID: {user.id})"
             full_context = f"{context}\n\n{user_context}"
             
-            # Generate response using Grok AI
-            response = self.grok_client.answer_comment(comment, full_context, self.language)
+            # Generate response using OpenAI ChatGPT
+            response = self.chatgpt_client.answer_comment(comment, full_context, self.language)
             
             if response:
                 # Format the response
@@ -236,7 +236,7 @@ class CommentHandler:
             
             Respond with only: APPROPRIATE, SPAM, OFFENSIVE, or IRRELEVANT"""
             
-            moderation_result = self.grok_client.generate_response(moderation_prompt, max_tokens=50)
+            moderation_result = self.chatgpt_client.generate_response(moderation_prompt, max_tokens=50)
             
             if moderation_result:
                 result = moderation_result.strip().upper()

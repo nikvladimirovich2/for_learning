@@ -14,7 +14,7 @@ def check_environment():
     
     required_vars = [
         "TELEGRAM_BOT_TOKEN",
-        "GROK_API_KEY"
+        "OPENAI_API_KEY"
     ]
     
     missing_vars = []

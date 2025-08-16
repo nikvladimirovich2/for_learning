@@ -3,17 +3,17 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from telegram import Bot, Message
-from grok_api import GrokAPIClient
+from chatgpt_api import ChatGPTAPIClient
 from channel_manager import ChannelManager
 from config import DEFAULT_TOPICS, MAX_ARTICLE_LENGTH, DEFAULT_LANGUAGE
 
 class ArticleGenerator:
-    """Generates articles on trending topics using Grok AI"""
+    """Generates articles on trending topics using OpenAI ChatGPT"""
     
-    def __init__(self, bot: Bot, grok_client: GrokAPIClient, 
+        def __init__(self, bot: Bot, chatgpt_client: ChatGPTAPIClient,
                  channel_manager: ChannelManager, language: str = DEFAULT_LANGUAGE):
         self.bot = bot
-        self.grok_client = grok_client
+        self.chatgpt_client = chatgpt_client
         self.channel_manager = channel_manager
         self.language = language
         self.generated_articles = {}  # Track generated articles
@@ -25,8 +25,8 @@ class ArticleGenerator:
         try:
             lang = language or self.language
             
-            # Generate article using Grok AI
-            article = self.grok_client.generate_article(topic, lang)
+            # Generate article using OpenAI ChatGPT
+            article = self.chatgpt_client.generate_article(topic, lang)
             
             if article:
                 # Store the generated article
@@ -50,8 +50,8 @@ class ArticleGenerator:
     async def generate_trending_article(self, language: str = None) -> Optional[str]:
         """Generate an article on a trending topic"""
         try:
-            # Get trending topics from Grok AI
-            trending_topics = self.grok_client.get_trending_topics(language or self.language)
+                    # Get trending topics from OpenAI ChatGPT
+        trending_topics = self.chatgpt_client.get_trending_topics(language or self.language)
             
             if trending_topics:
                 # Select the first trending topic
@@ -73,7 +73,7 @@ class ArticleGenerator:
             article_ids = []
             
             # Get trending topics
-            trending_topics = self.grok_client.get_trending_topics(language or self.language)
+            trending_topics = self.chatgpt_client.get_trending_topics(language or self.language)
             
             # Use trending topics if available, otherwise use default topics
             topics_to_use = trending_topics if trending_topics else self.topic_suggestions

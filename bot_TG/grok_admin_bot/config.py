@@ -1,4 +1,4 @@
-# Configuration file for Grok AI Telegram Bot
+# Configuration file for ChatGPT Telegram Bot
 import os
 from dotenv import load_dotenv
 
@@ -8,9 +8,10 @@ load_dotenv()
 # Telegram Bot Token
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-# Grok AI API Configuration
-GROK_API_KEY = os.getenv("GROK_API_KEY", "")
-GROK_API_URL = "https://api.x.ai/v1/chat/completions"  # Adjust based on actual Grok API endpoint
+# OpenAI ChatGPT API Configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_MODEL = "gpt-3.5-turbo"  # or "gpt-4" for better quality
 
 # Channel Management
 ADMIN_CHANNEL_ID = os.getenv("ADMIN_CHANNEL_ID", "")

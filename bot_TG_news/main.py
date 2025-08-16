@@ -1,98 +1,277 @@
-#TOKEN = ':'
-#CHANNEL_ID = '-' # channel with bot
-#CHANNEL_ID = '' # my personal chat with bot
-import requests
-from bs4 import BeautifulSoup
+#!/usr/bin/env python3
+"""
+Новостной бот для Telegram
+Парсит новости с сайта 013info.rs и отправляет их в канал
+"""
+
 import schedule
 import time
-import sqlite3
-from telegram import Bot
 import logging
+from datetime import datetime
+from typing import List, Dict
 
-# Настройки логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Импорты наших модулей
+from config.settings import (
+    TELEGRAM_TOKEN, CHAT_ID, NEWS_URL, PARSING_INTERVAL,
+    LOG_LEVEL, LOG_FILE
+)
+from database.models import NewsDatabase
+from services.news_parser import NewsParser
+from services.telegram_service import TelegramService
+from utils.helpers import (
+    setup_logging, health_check, cleanup_old_data,
+    get_performance_metrics, validate_news_data
+)
+
+# Настраиваем логирование
+setup_logging(LOG_LEVEL, LOG_FILE)
 logger = logging.getLogger(__name__)
 
-# URL сайта для парсинга
-url = 'https://013info.rs/pancevo/'
+class NewsBot:
+    def __init__(self):
+        """Инициализация бота"""
+        self.database = None
+        self.parser = None
+        self.telegram = None
+        self.is_running = False
+        
+        logger.info("Инициализация новостного бота")
+        
+        # Проверяем обязательные настройки
+        if not TELEGRAM_TOKEN:
+            raise ValueError("TELEGRAM_TOKEN не установлен")
+        if not CHAT_ID:
+            raise ValueError("CHAT_ID не установлен")
+        
+        # Инициализируем компоненты
+        self._init_components()
+        
+        logger.info("Новостной бот инициализирован успешно")
+    
+    def _init_components(self):
+        """Инициализирует все компоненты бота"""
+        try:
+            # База данных
+            self.database = NewsDatabase()
+            logger.info("База данных инициализирована")
+            
+            # Парсер новостей
+            self.parser = NewsParser(NEWS_URL)
+            logger.info("Парсер новостей инициализирован")
+            
+            # Telegram сервис
+            self.telegram = TelegramService(TELEGRAM_TOKEN)
+            logger.info("Telegram сервис инициализирован")
+            
+        except Exception as e:
+            logger.error(f"Ошибка инициализации компонентов: {e}")
+            raise
+    
+    @get_performance_metrics
+    def parse_and_send_news(self):
+        """Основная функция парсинга и отправки новостей"""
+        try:
+            logger.info("Начало цикла парсинга новостей")
+            
+            # Проверяем здоровье системы
+            if not health_check(self.database, self.telegram):
+                logger.error("Health check не пройден, пропускаем цикл")
+                return
+            
+            # Парсим новости
+            news_list = self.parser.get_all_news_pages()
+            
+            if not news_list:
+                logger.info("Новых новостей не найдено")
+                return
+            
+            logger.info(f"Найдено {len(news_list)} новостей")
+            
+            # Обрабатываем каждую новость
+            new_news_count = 0
+            sent_news_count = 0
+            
+            for news_data in news_list:
+                try:
+                    # Валидируем данные
+                    if not validate_news_data(news_data):
+                        logger.warning(f"Некорректные данные новости: {news_data.get('title', 'Unknown')}")
+                        continue
+                    
+                    # Добавляем в базу данных
+                    if self.database.add_news(
+                        title=news_data['title'],
+                        link=news_data['link'],
+                        content=news_data['content'],
+                        date=news_data.get('date'),
+                        category=news_data.get('category'),
+                        image_url=news_data.get('image_url')
+                    ):
+                        new_news_count += 1
+                        
+                        # Отправляем новость в Telegram
+                        if self.telegram.send_news(CHAT_ID, news_data):
+                            sent_news_count += 1
+                            logger.info(f"Новость отправлена: {news_data['title']}")
+                        else:
+                            logger.error(f"Не удалось отправить новость: {news_data['title']}")
+                    
+                except Exception as e:
+                    logger.error(f"Ошибка обработки новости: {e}")
+                    continue
+            
+            logger.info(f"Цикл завершен: {new_news_count} новых, {sent_news_count} отправлено")
+            
+        except Exception as e:
+            logger.error(f"Критическая ошибка в цикле парсинга: {e}")
+            # Отправляем уведомление об ошибке
+            try:
+                self.telegram.send_error_notification(CHAT_ID, str(e))
+            except:
+                pass
+    
+    def send_daily_digest(self):
+        """Отправляет ежедневный дайджест"""
+        try:
+            logger.info("Отправка ежедневного дайджеста")
+            
+            digest_data = self.database.get_daily_digest()
+            if digest_data:
+                self.telegram.send_daily_digest(CHAT_ID, digest_data)
+            else:
+                logger.info("Нет данных для ежедневного дайджеста")
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки ежедневного дайджеста: {e}")
+    
+    def send_statistics(self):
+        """Отправляет статистику бота"""
+        try:
+            logger.info("Отправка статистики")
+            
+            stats = self.database.get_statistics()
+            if stats:
+                self.telegram.send_statistics(CHAT_ID, stats)
+            else:
+                logger.warning("Не удалось получить статистику")
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки статистики: {e}")
+    
+    def cleanup_old_data(self):
+        """Очищает старые данные"""
+        try:
+            logger.info("Очистка старых данных")
+            cleanup_old_data(self.database, days=30)
+        except Exception as e:
+            logger.error(f"Ошибка очистки старых данных: {e}")
+    
+    def setup_scheduler(self):
+        """Настраивает планировщик задач"""
+        try:
+            # Основной цикл парсинга
+            schedule.every(PARSING_INTERVAL).minutes.do(self.parse_and_send_news)
+            
+            # Ежедневный дайджест в 9:00
+            schedule.every().day.at("09:00").do(self.send_daily_digest)
+            
+            # Статистика каждый день в 18:00
+            schedule.every().day.at("18:00").do(self.send_statistics)
+            
+            # Очистка старых данных каждый день в 3:00
+            schedule.every().day.at("03:00").do(self.cleanup_old_data)
+            
+            logger.info("Планировщик настроен")
+            
+        except Exception as e:
+            logger.error(f"Ошибка настройки планировщика: {e}")
+            raise
+    
+    def run(self):
+        """Запускает бота"""
+        try:
+            logger.info("Запуск новостного бота")
+            
+            # Настраиваем планировщик
+            self.setup_scheduler()
+            
+            # Отправляем сообщение о запуске
+            self.telegram.send_message(
+                CHAT_ID,
+                "🚀 **Новостной бот запущен**\n\nБот будет автоматически парсить новости и отправлять их в канал."
+            )
+            
+            self.is_running = True
+            
+            # Основной цикл
+            while self.is_running:
+                try:
+                    schedule.run_pending()
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    logger.info("Получен сигнал остановки")
+                    break
+                except Exception as e:
+                    logger.error(f"Ошибка в основном цикле: {e}")
+                    time.sleep(60)  # Ждем минуту перед повторной попыткой
+            
+        except Exception as e:
+            logger.error(f"Критическая ошибка запуска бота: {e}")
+            raise
+        finally:
+            self.stop()
+    
+    def stop(self):
+        """Останавливает бота"""
+        try:
+            logger.info("Остановка новостного бота")
+            
+            self.is_running = False
+            
+            # Отправляем сообщение об остановке
+            try:
+                self.telegram.send_message(
+                    CHAT_ID,
+                    "🛑 **Новостной бот остановлен**"
+                )
+            except:
+                pass
+            
+            # Закрываем соединения
+            if self.database:
+                self.database.close()
+            if self.parser:
+                self.parser.close()
+            
+            logger.info("Бот остановлен")
+            
+        except Exception as e:
+            logger.error(f"Ошибка при остановке бота: {e}")
 
-# Токен вашего бота Telegram
-TELEGRAM_TOKEN = ''
-
-# ID вашего чата в Telegram
-CHAT_ID = '-1002250474196'
-
-# Создаем объект бота
-bot = Bot(token=TELEGRAM_TOKEN)
-
-# Создаем базу данных для хранения информации о последних новостях
-conn = sqlite3.connect('news.db')
-cursor = conn.cursor()
-
-# Создаем таблицу для хранения информации о последних новостях
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS news (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    link TEXT,
-    content TEXT
-)
-''')
-conn.commit()
-
-def parse_news():
-    logger.info("Начало парсинга новостей")
-
-    # Получаем HTML-код страницы
-    response = requests.get(url)
-    html = response.text
-
-    # Создаем объект BeautifulSoup для парсинга HTML
-    soup = BeautifulSoup(html, 'html.parser')
-
-    # Находим все новости на странице
-    news_items = soup.find_all('div', class_='col articleContent')
-
-    # Проверяем наличие новых новостей
-    for news in news_items:
-        title_tag = news.find('h3')
-        if title_tag:
-            title = title_tag.text.strip()
-            link = title_tag.find('a')['href']
-        else:
-            title = "Заголовок не найден"
-            link = "Ссылка не найдена"
-
-        content_tag = news.find('div', class_='lead')
-        if content_tag:
-            content = content_tag.text.strip()
-        else:
-            content = "Текст новости не найден"
-
-        # Проверяем, есть ли такая новость в базе данных
-        cursor.execute('SELECT * FROM news WHERE title = ? AND link = ?', (title, link))
-        if cursor.fetchone() is None:
-            # Если новости нет в базе данных, добавляем её
-            cursor.execute('INSERT INTO news (title, link, content) VALUES (?, ?, ?)', (title, link, content))
-            conn.commit()
-
-            # Отправляем информацию о новой новости в Telegram
-            message = f"Заголовок: {title}\nТекст: {content}\nСсылка: {link}"
-            bot.send_message(chat_id=CHAT_ID, text=message)
-            logger.info(f"Отправлена новая новость: {title}")
-        else:
-            logger.info(f"Новость уже существует: {title}")
-
-    logger.info("Завершение парсинга новостей")
-
-def run_scheduler():
-    # Запускаем парсинг новостей каждую минуту
-    schedule.every(10).minutes.do(parse_news)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+def main():
+    """Главная функция"""
+    bot = None
+    
+    try:
+        # Создаем и запускаем бота
+        bot = NewsBot()
+        bot.run()
+        
+    except KeyboardInterrupt:
+        logger.info("Программа остановлена пользователем")
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {e}")
+        
+        # Отправляем уведомление об ошибке если возможно
+        if bot and bot.telegram:
+            try:
+                bot.telegram.send_error_notification(CHAT_ID, str(e))
+            except:
+                pass
+    finally:
+        # Останавливаем бота
+        if bot:
+            bot.stop()
 
 if __name__ == '__main__':
-    logger.info("Запуск скрипта")
-    run_scheduler()
+    main()

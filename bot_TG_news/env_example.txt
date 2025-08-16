@@ -1,0 +1,24 @@
+# Telegram Bot Configuration
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+CHAT_ID=-1002250474196
+
+# News Source Configuration
+NEWS_URL=https://013info.rs/pancevo/
+PARSING_INTERVAL=10
+MAX_PAGES=3
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE=bot.log
+
+# Request Configuration
+REQUEST_TIMEOUT=30
+REQUEST_DELAY=1
+MAX_CONTENT_LENGTH=200
+
+# Database Configuration
+DATABASE_FILE=news.db
+
+# Filtering Configuration
+# EXCLUDED_CATEGORIES=marketing,spam
+# EXCLUDED_KEYWORDS=reklama,oglas,sponzor,reklamni

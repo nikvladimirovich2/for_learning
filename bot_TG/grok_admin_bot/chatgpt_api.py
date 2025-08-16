@@ -2,22 +2,23 @@ import requests
 import json
 import time
 from typing import Dict, List, Optional
-from config import GROK_API_KEY, GROK_API_URL, ERROR_MESSAGES, DEFAULT_LANGUAGE
+from config import OPENAI_API_KEY, OPENAI_API_URL, OPENAI_MODEL, ERROR_MESSAGES, DEFAULT_LANGUAGE
 
-class GrokAPIClient:
-    """Client for interacting with Grok AI API"""
+class ChatGPTAPIClient:
+    """Client for interacting with OpenAI ChatGPT API"""
     
     def __init__(self, api_key: str = None, language: str = DEFAULT_LANGUAGE):
-        self.api_key = api_key or GROK_API_KEY
+        self.api_key = api_key or OPENAI_API_KEY
         self.language = language
-        self.base_url = GROK_API_URL
+        self.base_url = OPENAI_API_URL
+        self.model = OPENAI_MODEL
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
     
     def _make_request(self, endpoint: str, data: Dict) -> Optional[Dict]:
-        """Make a request to the Grok AI API"""
+        """Make a request to the OpenAI ChatGPT API"""
         try:
             response = requests.post(
                 f"{self.base_url}{endpoint}",
@@ -35,7 +36,7 @@ class GrokAPIClient:
             return None
     
     def generate_response(self, prompt: str, context: str = "", max_tokens: int = 1000) -> Optional[str]:
-        """Generate a response using Grok AI"""
+        """Generate a response using OpenAI ChatGPT"""
         try:
             # Prepare the prompt with context
             full_prompt = f"{context}\n\n{prompt}" if context else prompt
@@ -47,12 +48,15 @@ class GrokAPIClient:
                 full_prompt += "\n\nAnswer in English."
             
             data = {
-                "model": "grok-beta",  # Adjust based on actual Grok model names
+                "model": self.model,
                 "messages": [
                     {"role": "user", "content": full_prompt}
                 ],
                 "max_tokens": max_tokens,
-                "temperature": 0.7
+                "temperature": 0.7,
+                "top_p": 1.0,
+                "frequency_penalty": 0.0,
+                "presence_penalty": 0.0
             }
             
             response = self._make_request("", data)
@@ -154,7 +158,7 @@ class GrokAPIClient:
             return []
     
     def test_connection(self) -> bool:
-        """Test the connection to Grok AI API"""
+        """Test the connection to OpenAI ChatGPT API"""
         try:
             test_prompt = "Hello, this is a test message. Please respond with 'Connection successful'."
             response = self.generate_response(test_prompt, max_tokens=50)
