@@ -1,6 +1,6 @@
-#TOKEN = '7584581355:AAHCUgzHaZySZnEXWSkZzg0LcuqsGq_BgXk'
-#CHANNEL_ID = '-1002250474196' # channel with bot
-#CHANNEL_ID = '872305034' # my personal chat with bot
+#TOKEN = ':'
+#CHANNEL_ID = '-' # channel with bot
+#CHANNEL_ID = '' # my personal chat with bot
 import requests
 from bs4 import BeautifulSoup
 import schedule
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 url = 'https://013info.rs/pancevo/'
 
 # Токен вашего бота Telegram
-TELEGRAM_TOKEN = '7584581355:AAHCUgzHaZySZnEXWSkZzg0LcuqsGq_BgXk'
+TELEGRAM_TOKEN = ''
 
 # ID вашего чата в Telegram
 CHAT_ID = '-1002250474196'
